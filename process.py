@@ -19,26 +19,31 @@ def train(directory):
         target_frame = next_frame
     model.save_weights('weighty.h5')
 
-def test(input_directory, output_directory):
+def test(input_directory, output_directory, upsample=True):
     files = sorted(os.listdir(input_directory))
-    prev_frame = np.zeros((1, 3, 360,640))
+    prev_frame = np.zeros((1, 3, 360, 640))
     model = build_model()
     model.load_weights('weighty.h5')
-    for i, filename in enumerate(files):
+    i = 0
+    for filename in files:
         next_frame = load_image(os.path.join(input_directory, filename))
         model_input = np.concatenate([prev_frame, next_frame], axis=1)
-        output = model.predict(model_input).reshape(3,360,640)
-        output = output.transpose(1,2,0).astype(np.uint8)
-        output_filename = '{}/{:05d}.jpg'.format(output_directory, i)
-        Image.fromarray(output).save(output_filename)
-        print('Output test frame {}'.format(filename))
+        output = model.predict(model_input)
+        save_image(output, '{}/{:05d}.jpg'.format(output_directory, i))
+        save_image(next_frame, '{}/{:05d}.jpg'.format(output_directory, i+1))
         prev_frame = next_frame
+        i += 2
     print("Finished")
 
 def load_image(filepath):
     img = Image.open(filepath)
     img.load()
     return np.array(img).transpose(2,0,1).reshape((1,3,360,640))
+
+def save_image(img, filepath):
+    pixels = img.reshape(3,360,640).transpose(1,2,0).clip(0,255)
+    Image.fromarray(pixels.astype(np.uint8)).save(filepath)
+    print('Saved image {}'.format(filepath))
 
 
 def build_model():
